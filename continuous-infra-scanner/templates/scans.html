@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Continuous Infra Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="50" height="50" class="d-inline-block"> HOME</a>
+            <h2 class="text-center">Continuous Infra Scanner</h2>
+            <a class="btn btn-primary" href="/alerts" style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">  Check Alerts Messages  </a>
+        </div>
+    </nav>
+    <div class="container">
+        {% for ip, scans in scans.items() %}
+        <div class="card mt-8">
+            <div class="card-header">
+                <h4>
+                    IP: <a href="http://{{ ip }}" target="_blank">{{ ip }}</a>
+                    <button class="btn btn-primary float-right" type="button" data-toggle="collapse" data-target="#details-{{ loop.index }}" aria-expanded="false" aria-controls="details-{{ loop.index }}">
+                        Toggle Details
+                    </button>
+                </h4>
+            </div>
+            <div class="card-body collapse" id="details-{{ loop.index }}">
+                {% for scan in scans %}
+                <div class="mt-4">
+                    <h4 class="text-primary">Date: {{ scan.scanned_date }}</h4>
+                    <h5>Open Ports:</h5>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Status</th>
+                                <th>Protocol</th>
+                                <th>Service</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if scan.open_port_details %} {% for port, details in scan.open_port_details.items() %}
+                            <tr>
+                                <td><a href="http://{{ ip }}:{{ details.port }}" target="_blank">{{ details.port }}</a></td>
+                                <td>{{ details.port_status }}</td>
+                                <td>{{ details.protocol }}</td>
+                                <td>{{ details.service }}</td>
+                            </tr>
+                            {% endfor %} {% else %}
+                            <tr>
+                                <td colspan="4">No open ports available</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    <h5>HTTP Details:</h5>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>HTTP Status</th>
+                                <th>Headers</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if scan.ports_http_details %} {% for port, http_details in scan.ports_http_details.items() %}
+                            <tr>
+                                <td><a href="http://{{ ip }}:{{ port }}" target="_blank">{{ port }}</a></td>
+                                <td>{{ http_details.status_code }}</td>
+                                <td>
+                                    {% if 'headers' in http_details %}
+                                    <ul>
+                                        {% for header, value in http_details.headers.items() %}
+                                        <li><strong>{{ header }}:</strong> {{ value }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %} No headers available {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %} {% else %}
+                            <tr>
+                                <td colspan="3">No HTTP details available</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+
+</html>

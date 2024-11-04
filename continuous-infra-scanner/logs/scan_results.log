@@ -1,0 +1,35 @@
+2024-11-04 18:46:19,893 - {
+    "server_dns": "localhost",
+    "server_ip": "127.0.0.1",
+    "open_port_details": {
+        "8180": {
+            "port": 8180,
+            "port_status": "open",
+            "protocol": "tcp",
+            "service": "unknown"
+        },
+        "8999": {
+            "port": 8999,
+            "port_status": "open",
+            "protocol": "tcp",
+            "service": "bctp"
+        }
+    },
+    "ports_http_details": {
+        "8180": {
+            "status_code": 401,
+            "headers": {
+                "server": "Werkzeug/2.1.0 Python/3.11.10",
+                "date": "Mon, 04 Nov 2024 18:46:14 GMT",
+                "content-type": "text/html; charset=utf-8",
+                "content-length": "19",
+                "www-authenticate": "Basic realm=\"Authentication Required\""
+            }
+        },
+        "8999": {
+            "error": "timed out"
+        }
+    },
+    "scanned_date": "2024-11-04 18:46:19",
+    "_id": "6729167bb43b3e63da13e140"
+}

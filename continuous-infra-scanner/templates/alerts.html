@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continuous Infra Scanner</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="50" height="50" class="d-inline-block"> HOME</a>
+            <h2 class="text-center">Continuous Infra Scanner</h2>
+            <a class="btn btn-primary" href="/alerts" style="--bs-btn-padding-y: .25rem; --bs-btn-padding-x: .5rem; --bs-btn-font-size: .75rem;">  Check Alerts Messages  </a>
+        </div>
+    </nav>
+    <div class="container">
+        <h1 class="text-center">Alerts</h1>
+        <div class="mt-4">
+            <div class="accordion" id="ipsAccordion">
+                {% for ip, alerts in alerts_by_ip.items() %}
+                <div class="card">
+                    <div class="card-header" id="headingIp{{ loop.index }}">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseIp{{ loop.index }}" aria-expanded="true" aria-controls="collapseIp{{ loop.index }}">
+                                {{ ip }}
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseIp{{ loop.index }}" class="collapse" aria-labelledby="headingIp{{ loop.index }}" data-parent="#ipsAccordion">
+                        <div class="card-body">
+                            <div class="accordion" id="datesAccordion{{ loop.index }}">
+                                {% for alert in alerts %}
+                                <div class="card">
+                                    <div class="card-header" id="headingDate{{ loop.index }}-{{ loop.index0 }}">
+                                        <h2 class="mb-0">
+                                            <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseDate{{ loop.index }}-{{ loop.index0 }}" aria-expanded="true" aria-controls="collapseDate{{ loop.index }}-{{ loop.index0 }}">
+                                                {{ alert.alert_date }}
+                                            </button>
+                                        </h2>
+                                    </div>
+                                    <div id="collapseDate{{ loop.index }}-{{ loop.index0 }}" class="collapse" aria-labelledby="headingDate{{ loop.index }}-{{ loop.index0 }}" data-parent="#datesAccordion{{ loop.index }}">
+                                        <div class="card-body">
+                                            <ul>
+                                                {% for change in alert.changes %}
+                                                <li>{{ change }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+requests
+Flask==2.1.0
+Werkzeug==2.1.0
+pymongo[srv]==3.12.1
+httpx==0.21.0
+Flask-HTTPAuth==4.4.0
+
