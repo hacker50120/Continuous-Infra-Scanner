@@ -1,20 +1,15 @@
 # nmap_scan_module.py
 import subprocess
-import json
-from datetime import datetime
-from pymongo import MongoClient
-import os
 from datetime import datetime, timedelta
+from mongo_connection import get_db  # Import from mongo_connection
 
-# MongoDB connection string
-mongo_conn_str=os.getenv('MONGO_URI')
-mongo_client = MongoClient(mongo_conn_str)
-
-db = mongo_client['scan_results']
+# Get MongoDB database instance
+db = get_db('scan_results')
 nmap_collection = db['nmap_scans']
 nessus_collection = db['nessus_scans']
 
 def run_nmap_scan(ip, port):
+    """Run an Nmap scan on the specified IP and port."""
     try:
         print(f"Starting scan for {ip}:{port}")
         command = f"nmap -Pn {ip} -p{port} -oX -"
@@ -25,6 +20,7 @@ def run_nmap_scan(ip, port):
         return None
 
 def parse_nmap_output(xml_output):
+    """Parse Nmap XML output into a dictionary."""
     try:
         import xmltodict
         data = xmltodict.parse(xml_output)
@@ -34,6 +30,7 @@ def parse_nmap_output(xml_output):
         return None
 
 def store_scan_results(ip, port, scan_data):
+    """Store Nmap scan results in MongoDB."""
     try:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         document = {
@@ -48,21 +45,26 @@ def store_scan_results(ip, port, scan_data):
         print(f"Error storing scan results for {ip}:{port} - {e}")
 
 def run_and_store_nmap_scans(ip_wise_data):
+    """Run Nmap scans and store results for the given IP-wise data."""
     open_ports = []
     for ip, ports in ip_wise_data.items():
         for port in ports:
-            scan_output = run_nmap_scan(ip, port.split()[0])
+            scan_output = run_nmap_scan(ip, port.split()[0])  # Extract port number
             if scan_output:
                 scan_data = parse_nmap_output(scan_output)
-                store_scan_results(ip, port, scan_data)
-                open_ports.append((ip, port))
+                if scan_data:
+                    store_scan_results(ip, port, scan_data)
+                    open_ports.append((ip, port))
     return open_ports
 
 def get_ip_wise_scan_data():
+    """Fetch IP-wise scan data from the latest Nessus scans."""
     # Find the latest entry
     latest_entry = nessus_collection.find_one(sort=[("timestamp", -1)])
     if not latest_entry:
-        return jsonify({'status': 'error', 'message': 'No scan data found'}), 404
+        # Note: jsonify is imported in your original code but not here; handle error differently if not in Flask context
+        print("No scan data found")
+        return {}, None
     
     # Convert timestamp to datetime object
     latest_timestamp = datetime.strptime(latest_entry['timestamp'], '%Y-%m-%d %H:%M:%S')
