@@ -1,20 +1,18 @@
+# nessus_auth_data_fetch_to_DB.py
 import os
 import requests
-import os
-import requests
-import json
-from pymongo import MongoClient, ReturnDocument
-from bson import ObjectId
 from flask import jsonify
 from datetime import datetime
+from mongo_connection import get_db  # Import from mongo_connection
+from pymongo import ReturnDocument
 
-# MongoDB connection string with authentication
-mongo_conn_str=os.getenv('MONGO_URI')
-nessus_hostname=os.getenv('NESSUS_HOSTNAME')
+# Environment variables
+nessus_hostname = os.getenv('NESSUS_HOSTNAME')
 nessus_username = os.getenv('NESSUS_USERNAME')
 nessus_password = os.getenv('NESSUS_PASSWORD')
-mongo_client = MongoClient(mongo_conn_str)
-db = mongo_client['scan_results']
+
+# Get MongoDB database instance
+db = get_db('scan_results')
 nessus_collection = db['nessus_scans']
 counter_collection = db['counters']
 
@@ -23,7 +21,7 @@ if counter_collection.count_documents({"_id": "insert_trackRecord"}) == 0:
     counter_collection.insert_one({"_id": "insert_trackRecord", "seq": 1000})
 
 def get_next_sequence():
-    """ Get the next sequence number for insert_trackRecord """
+    """Get the next sequence number for insert_trackRecord."""
     counter = counter_collection.find_one_and_update(
         {"_id": "insert_trackRecord"},
         {"$inc": {"seq": 1}},
@@ -32,7 +30,7 @@ def get_next_sequence():
     return counter['seq']
 
 def authenticate_nessus():
-    """ Authenticate with Nessus and return the token """
+    """Authenticate with Nessus and return the token."""
     auth_url = f'https://{nessus_hostname}/session'
 
     headers = {
@@ -49,10 +47,10 @@ def authenticate_nessus():
     if response.status_code == 200:
         return response.json()['token']
     else:
-        raise Exception('Failed to authenticate with Nessus')
+        raise Exception(f'Failed to authenticate with Nessus: {response.status_code} - {response.text}')
 
 def fetch_nessus_data(report_number, plugins):
-    """ Fetch Nessus data for given report number and plugins """
+    """Fetch Nessus data for given report number and plugins."""
     try:
         token = authenticate_nessus()  # Ensure token is refreshed for each call
     except Exception as e:
@@ -65,7 +63,7 @@ def fetch_nessus_data(report_number, plugins):
         'Connection': 'keep-alive',
         'Content-Type': 'application/json',
         'Pragma': 'no-cache',
-        'Referer': 'https://{nessus_hostname}/',
+        'Referer': f'https://{nessus_hostname}/',
         'Sec-Fetch-Dest': 'empty',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-origin',
@@ -86,11 +84,18 @@ def fetch_nessus_data(report_number, plugins):
             nessus_data['insert_trackRecord'] = insert_trackRecord
             all_data.append(nessus_data)
         else:
-            return jsonify({'status': 'error', 'message': f'Failed to fetch data for plugin {plugin}'}), response.status_code
+            return jsonify({
+                'status': 'error',
+                'message': f'Failed to fetch data for plugin {plugin}: {response.status_code} - {response.text}'
+            }), response.status_code
 
     try:
         result = nessus_collection.insert_many(all_data)
         inserted_ids = [str(id) for id in result.inserted_ids]
-        return jsonify({'status': 'success', 'message': 'Nessus data stored successfully', 'ids': inserted_ids})
+        return jsonify({
+            'status': 'success',
+            'message': 'Nessus data stored successfully',
+            'ids': inserted_ids
+        })
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': f'Failed to store data in MongoDB: {str(e)}'}), 500
