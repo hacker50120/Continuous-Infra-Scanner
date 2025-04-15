@@ -1,0 +1,8 @@
+# playbook.yml
+- hosts: all
+  tasks:
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+      become: yes
