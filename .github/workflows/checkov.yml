@@ -43,7 +43,7 @@ jobs:
       - name: Run Checkov
         id: checkov
         run: |
-          checkov -d . --output cli,sarif --output-file-path console,results.sarif --soft-fail || true
+          checkov -d . --output cli --output sarif --output-file-path results.sarif --soft-fail || true
           if [ ! -f results.sarif ]; then
             echo "No such IaC found"
             echo "NO_IAC_FOUND=true" >> $GITHUB_ENV
