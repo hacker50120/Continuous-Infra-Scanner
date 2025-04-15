@@ -26,19 +26,35 @@ jobs:
       - name: Install Checkov
         run: pip install checkov
 
+      - name: Debug repository contents
+        run: |
+          echo "Listing potential IaC files:"
+          echo "Terraform files (.tf):"
+          find . -type f -name "*.tf" || echo "No .tf files found"
+          echo "YAML files (.yaml, .yml):"
+          find . -type f \( -name "*.yaml" -o -name "*.yml" \) || echo "No .yaml/.yml files found"
+          echo "JSON files (.json):"
+          find . -type f -name "*.json" || echo "No .json files found"
+          echo "Dockerfiles:"
+          find . -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) || echo "No Dockerfiles found"
+          echo "Full directory structure:"
+          find . -type f
+
       - name: Run Checkov
         id: checkov
         run: |
-          checkov -d . --output-format cli --output-format sarif --output-file-path console,results.sarif --soft-fail || true
+          checkov -d . --output cli,sarif --output-file-path console,results.sarif --soft-fail || true
           if [ ! -f results.sarif ]; then
             echo "No such IaC found"
-            echo "::set-output name=no-iac-found::true"
+            echo "NO_IAC_FOUND=true" >> $GITHUB_ENV
+          else
+            echo "NO_IAC_FOUND=false" >> $GITHUB_ENV
           fi
         env:
           PYTHONPATH: /opt/hostedtoolcache/Python/3.11.11/x64/lib/python3.11/site-packages
 
       - name: Upload SARIF file
-        if: steps.checkov.outputs.no-iac-found != 'true'
+        if: env.NO_IAC_FOUND != 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
