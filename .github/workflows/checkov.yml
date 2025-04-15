@@ -17,18 +17,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install Checkov
         run: pip install checkov
+
       - name: Run Checkov
         id: checkov
         run: |
-          checkov -d . --output-format cli --output-format sarif --output-file-path console,results.sarif --soft-fail
+          checkov -d . --output-format cli --output-format sarif --output-file-path console,results.sarif --soft-fail || true
+          if [ ! -f results.sarif ]; then
+            echo "No such IaC found"
+            echo "::set-output name=no-iac-found::true"
+          fi
+        env:
+          PYTHONPATH: /opt/hostedtoolcache/Python/3.11.11/x64/lib/python3.11/site-packages
+
       - name: Upload SARIF file
-        if: always()
+        if: steps.checkov.outputs.no-iac-found != 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif
