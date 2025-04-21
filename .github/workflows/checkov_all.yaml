@@ -1,0 +1,47 @@
+name: Checkov IaC Scan
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  checkov-scan:
+    runs-on: ${{ ubuntu-latest || vars.ACTIONS_RUNNER_SW_NONPROD_GENERIC || 'self-hosted' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Checkov
+        run: |
+          mkdir -p ./checkov
+          /usr/bin/pip3 install checkov==2.5.0 --no-cache-dir -t ./checkov
+          export PYTHONPATH=$PWD/checkov:$PYTHONPATH
+        env:
+          PYTHONPATH: $PWD/checkov
+
+      - name: Run Checkov
+        id: checkov
+        run: |
+          export PYTHONPATH=$PWD/checkov:$PYTHONPATH
+          export PATH=$PWD/checkov/bin:$PATH
+          ./checkov/bin/checkov -d . --skip-path ./checkov --framework terraform dockerfile kubernetes ansible --output cli --output sarif --output-file-path ./results.sarif --soft-fail || true
+          if [ -f results.sarif ]; then
+            echo "SARIF file created: ./results.sarif"
+            echo "NO_IAC_FOUND=false" >> $GITHUB_ENV
+          else
+            echo "No such IaC found"
+            echo "NO_IAC_FOUND=true" >> $GITHUB_ENV
+          fi
+
+      - name: Upload SARIF file
+        if: env.NO_IAC_FOUND != 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ./results.sarif
