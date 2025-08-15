@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  infrascanner-app:
+    build:
+      context: ../..
+      dockerfile: IaC/docker/Dockerfile
+    ports:
+      - "8180:8180"
+    env_file: [.env]
+    volumes:
+      # Logs are stored in an internal volume, *not* bind-mounted to the host
+      - logs-data:/usr/src/app/logs
+      # Still bind-mount ip.txt so you can edit targets from the host
+      - ../../app/ip.txt:/usr/src/app/ip.txt
+    depends_on: [mongodb]
+    restart: unless-stopped
+    networks: [infrascanner-network]
+
+  mongodb:
+    image: mongo:latest
+    env_file: [.env]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: scan_results
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks: [infrascanner-network]
+
+volumes:
+  mongo-data:
+  logs-data:
+
+networks:
+  infrascanner-network:
+    driver: bridge

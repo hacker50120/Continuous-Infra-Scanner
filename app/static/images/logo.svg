@@ -1,0 +1,36 @@
+<svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Shield background -->
+  <path d="M25 2 L45 12 L45 25 C45 35 35 42 25 48 C15 42 5 35 5 25 L5 12 Z" 
+        fill="url(#shieldGradient)" 
+        stroke="#ffffff" 
+        stroke-width="1"
+        filter="url(#glow)"/>
+  
+  <!-- Scanner lines -->
+  <line x1="15" y1="20" x2="35" y2="20" stroke="#ffffff" stroke-width="2" opacity="0.8"/>
+  <line x1="15" y1="25" x2="35" y2="25" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+  <line x1="15" y1="30" x2="35" y2="30" stroke="#ffffff" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Center dot -->
+  <circle cx="25" cy="25" r="3" fill="#ffffff" opacity="0.9"/>
+  
+  <!-- Scanning pulse -->
+  <circle cx="25" cy="25" r="8" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3">
+    <animate attributeName="r" values="8;15;8" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite"/>
+  </circle>
+</svg>

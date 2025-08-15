@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+{% block title %}Home - InfraScanner Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Scanner Control Center -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-radar me-2"></i>Scanner Control Center</h5>
+                <div class="d-flex align-items-center">
+                    <span class="status-indicator {{ 'status-running' if scanner_status.running else 'status-stopped' }}"></span>
+                    <span class="fw-bold status-text">{{ 'Running' if scanner_status.running else 'Idle' }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if scanner_status.running %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="loading-spinner me-3"></div>
+                        <div>
+                            <h6 class="mb-0">Scan in Progress</h6>
+                            <small class="text-muted">PID: {{ scanner_status.pid or 'N/A' }}</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-play-circle text-primary" style="font-size: 3rem;"></i>
+                        <h6 class="mt-3 mb-0">Ready to Scan</h6>
+                        <small class="text-muted">Select scan type and start monitoring</small>
+                    </div>
+                {% endif %}
+
+                <!-- SIMPLE: Recent Activity with Scrollable Div -->
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activity</h6>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearMessages()">
+                            <i class="fas fa-trash-alt me-1"></i>Clear
+                        </button>
+                    </div>
+
+                    <!-- FIXED: Scrollable Messages Div with proper overflow control -->
+                    <div id="messages-container" class="messages-scrollable-div">
+                        {% if scanner_status.messages %}
+                            {% for message in scanner_status.messages %}
+                                <div class="message-line">
+                                    <small class="text-muted">Now</small> - {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-inbox"></i> No recent activity
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Scan Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Quick Scan</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('start_scan') }}" method="post">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Scan Type</label>
+                            <select class="form-select" name="scan_type">
+                                <option value="light">⚡ Light Scan (Fast, Top 1000 ports)</option>
+                                <option value="fast">🚀 Fast Scan (All ports, high speed)</option>
+                                <option value="deep">🔍 Deep Scan (Comprehensive analysis)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100" {{ 'disabled' if scanner_status.running }} id="start-scan-btn">
+                                <i class="fas fa-play me-2"></i>Start Scan
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if scanner_status.running %}
+                <form action="{{ url_for('abort_scan') }}" method="post" class="mt-3">
+                    <button type="submit" class="btn btn-danger" id="abort-scan-btn">
+                        <i class="fas fa-stop me-2"></i>Abort Scan
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Security Overview Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Security Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="bg-primary bg-opacity-10 rounded p-3 stats-item">
+                            <i class="fas fa-search text-primary" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-0 animated-number" data-target="{{ stats.total_scans or 0 }}" id="total-scans">
+                                {{ stats.total_scans or 0 }}
+                            </h4>
+                            <small class="text-muted">Total Scans</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="bg-warning bg-opacity-10 rounded p-3 stats-item">
+                            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-0 animated-number" data-target="{{ stats.total_alerts or 0 }}" id="total-alerts">
+                                {{ stats.total_alerts or 0 }}
+                            </h4>
+                            <small class="text-muted">Active Alerts</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-danger bg-opacity-10 rounded p-3 stats-item">
+                            <i class="fas fa-bug text-danger" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-0 animated-number" data-target="{{ stats.total_vulnerabilities or 0 }}" id="total-vulns">
+                                {{ stats.total_vulnerabilities or 0 }}
+                            </h4>
+                            <small class="text-muted">Vulnerabilities</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-success bg-opacity-10 rounded p-3 stats-item">
+                            <i class="fas fa-bullseye text-success" style="font-size: 2rem;"></i>
+                            <h4 class="mt-2 mb-0 animated-number" data-target="{{ stats.target_ips or 0 }}" id="total-targets">
+                                {{ stats.target_ips or 0 }}
+                            </h4>
+                            <small class="text-muted">Targets</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('edit_ips') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>Add Targets
+                    </a>
+                    <a href="{{ url_for('vulnerabilities') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-shield-alt me-2"></i>Vulnerability Scan
+                    </a>
+                    <a href="{{ url_for('get_scans') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>View Scan Results
+                    </a>
+                    <a href="{{ url_for('config') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-cog me-2"></i>Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* IMPROVED: Modern Activity Feed */
+.activity-feed {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 50%;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.activity-feed.expanded {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1050;
+    background: rgba(15, 23, 42, 0.98);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.messages-container {
+    height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    position: relative;
+}
+
+.activity-feed.expanded .messages-container {
+    height: calc(100vh - 120px);
+    padding: 20px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    transition: background-color 0.2s ease;
+    position: relative;
+    min-height: 60px;
+}
+
+.activity-item:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    margin-top: 4px;
+}
+
+.activity-icon i {
+    font-size: 8px;
+    color: #22c55e;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.activity-time {
+    margin-bottom: 4px;
+}
+
+.activity-message {
+    font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: rgba(248, 250, 252, 0.9);
+    background: rgba(30, 41, 59, 0.6);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid #3b82f6;
+    word-break: break-all;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    position: relative;
+}
+
+.activity-message::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+    border-radius: 2px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: rgba(148, 163, 184, 0.6);
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Enhanced scrollbar */
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #2563eb, #1e40af);
+}
+
+/* Firefox scrollbar */
+.messages-container {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 rgba(30, 41, 59, 0.3);
+}
+
+/* Expand button animation */
+.activity-feed.expanded + * #expand-btn i {
+    transform: rotate(180deg);
+}
+
+#expand-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* Status indicator animations */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.status-running {
+    background-color: #22c55e;
+    animation: pulse 2s infinite;
+}
+
+.status-stopped {
+    background-color: #6b7280;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Loading spinner */
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f4f6;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Stats items hover effect */
+.stats-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.stats-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive improvements for smaller screens */
+@media (max-width: 768px) {
+    .messages-scrollable-div {
+        font-size: 0.75rem; /* Smaller font on mobile */
+        height: 200px; /* Shorter height on mobile */
+    }
+    
+    .message-line {
+        padding: 0.2rem 0;
+    }
+}
+</style>
+
+<script>
+// IMPROVED: Message Management with Better UI
+let messages = [];
+let isExpanded = false;
+
+function addMessage(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString('en-US', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    
+    // Clean and truncate very long messages
+    let cleanMessage = message
+        .replace(/={20,}/g, '')
+        .replace(/^\s+|\s+$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    // Truncate extremely long messages for better display
+    if (cleanMessage.length > 500) {
+        cleanMessage = cleanMessage.substring(0, 497) + '...';
+    }
+    
+    if (cleanMessage.length > 0) {
+        messages.unshift({ message: cleanMessage, timestamp, type });
+        
+        // Keep only last 50 messages
+        if (messages.length > 50) {
+            messages = messages.slice(0, 50);
+        }
+        
+        updateMessagesDisplay();
+    }
+}
+
+function updateMessagesDisplay() {
+    const container = document.getElementById('messages-container');
+    
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No recent activity</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = messages.map(msg => 
+        `<div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas fa-circle"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-time">
+                    <small class="text-muted">${msg.timestamp}</small>
+                </div>
+                <div class="activity-message">${escapeHtml(msg.message)}</div>
+            </div>
+        </div>`
+    ).join('');
+    
+    // Auto-scroll to top for new messages
+    container.scrollTop = 0;
+}
+
+function toggleExpanded() {
+    const feed = document.getElementById('activity-feed');
+    const btn = document.getElementById('expand-btn');
+    
+    isExpanded = !isExpanded;
+    
+    if (isExpanded) {
+        feed.classList.add('expanded');
+        btn.innerHTML = '<i class="fas fa-compress-alt me-1"></i>Collapse';
+        
+        // Add overlay background
+        const overlay = document.createElement('div');
+        overlay.id = 'activity-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+            backdrop-filter: blur(5px);
+        `;
+        overlay.onclick = toggleExpanded;
+        document.body.appendChild(overlay);
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+    } else {
+        feed.classList.remove('expanded');
+        btn.innerHTML = '<i class="fas fa-expand-alt me-1"></i>Expand';
+        
+        // Remove overlay
+        const overlay = document.getElementById('activity-overlay');
+        if (overlay) overlay.remove();
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    }
+}
+
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function clearMessages() {
+    messages = [];
+    updateMessagesDisplay();
+    setTimeout(() => {
+        addMessage('Messages cleared', 'system');
+    }, 100);
+}
+
+// Animated Number Counter
+function animateNumber(element, target) {
+    const current = parseInt(element.textContent) || 0;
+    const increment = (target - current) / 20;
+    let step = 0;
+
+    const timer = setInterval(() => {
+        step++;
+        const value = Math.floor(current + (increment * step));
+
+        if (step >= 20) {
+            element.textContent = target;
+            clearInterval(timer);
+        } else {
+            element.textContent = value;
+        }
+    }, 50);
+}
+
+// Auto-refresh scanner status
+function updateStatus() {
+    fetch('/status')
+        .then(response => response.json())
+        .then(data => {
+            const indicator = document.querySelector('.status-indicator');
+            const statusText = document.querySelector('.status-text');
+            const startBtn = document.getElementById('start-scan-btn');
+            const abortBtn = document.getElementById('abort-scan-btn');
+
+            if (data.running) {
+                indicator.className = 'status-indicator status-running';
+                statusText.textContent = 'Running';
+                if (startBtn) startBtn.disabled = true;
+                if (abortBtn) abortBtn.style.display = 'inline-block';
+
+                // Add new messages
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        if (!messages.some(existing => existing.message === msg)) {
+                            addMessage(msg);
+                        }
+                    });
+                }
+            } else {
+                indicator.className = 'status-indicator status-stopped';
+                statusText.textContent = 'Idle';
+                if (startBtn) startBtn.disabled = false;
+                if (abortBtn) abortBtn.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching status:', error);
+        });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Add existing messages from backend
+    {% if scanner_status.messages %}
+        {% for message in scanner_status.messages %}
+            addMessage('{{ message|replace("'", "\\'") }}');
+        {% endfor %}
+    {% endif %}
+
+    // Set up auto-refresh
+    setInterval(updateStatus, 3000);
+
+    // Initial stats animation
+    setTimeout(() => {
+        const numbers = document.querySelectorAll('.animated-number');
+        numbers.forEach(number => {
+            const target = parseInt(number.getAttribute('data-target')) || 0;
+            animateNumber(number, target);
+        });
+    }, 500);
+});
+
+// Handle form submissions
+document.querySelector('form[action="{{ url_for("start_scan") }}"]')?.addEventListener('submit', function() {
+    addMessage('Initiating scan...');
+});
+
+// Add flash messages
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for category, message in messages %}
+                addMessage('{{ message|replace("'", "\\'") }}');
+            {% endfor %}
+        });
+    {% endif %}
+{% endwith %}
+</script>
+{% endblock %}

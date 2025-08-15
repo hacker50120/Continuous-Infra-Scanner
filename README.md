@@ -1,149 +1,226 @@
-# Continuous-Infra-Scanner
+# InfraScanner Pro 🛡️
 
-The **Continuous-Infra-Scanner** system enhances infrastructure security by leveraging **NMAP** to conduct thorough security assessments, offering both graphical visualizations and tabular reports that detail open ports, IP addresses, and potential vulnerabilities. These visual insights and structured data empower security teams to quickly identify and prioritize critical areas of concern.
+A modern, automated infrastructure vulnerability scanner with comprehensive security monitoring and real-time alerting capabilities.
 
-In addition to **NMAP** scanning, the system integrates seamlessly with **Nessus Professional**, further strengthening vulnerability management by adding in-depth analysis and actionable insights into security posture. This dual integration ensures a comprehensive approach to threat detection, enabling organizations to efficiently address vulnerabilities across their infrastructure.
+## 🚀 Features
 
-A key feature of Continuous-Infra-Scanner is its **comprehensive logging** capability. The system meticulously records all events and alerts, providing a valuable resource for **incident response** and **historical analysis**. This enables security teams to review past issues, track patterns over time, and maintain a robust audit trail, which is essential for effective monitoring and continuous improvement in security practices.
+- **Automated Scanning**: Scheduled vulnerability assessments using Nuclei
+- **Real-time Monitoring**: Continuous infrastructure change detection
+- **Modern UI**: Dark theme with futuristic design inspired by ProjectDiscovery
+- **Slack Integration**: Real-time alerts and reports
+- **Asset Management**: Technology stack detection and asset inventory
+- **Risk Scoring**: Comprehensive risk assessment and scoring
+- **Multi-target Support**: Scan multiple IPs and networks concurrently
 
----
+## 📁 Project Structure
 
-# Demonstration Video
-For a step-by-step walkthrough of the setup, configuration, and usage of this project, please refer to the demonstration video. [https://youtu.be/DqtDd37b6xw](https://www.youtube.com/watch?v=DqtDd37b6xw)
+```
+infrascanner-pro/
+├── app/                        Main application
+│   ├── src/                   Python source code
+│   │   ├── app.py            Flask web application
+│   │   ├── script.py         Main scanning logic
+│   │   ├── scheduler.py      Automated scheduling
+│   │   ├── vulnerability_scanner.py  Nuclei integration
+│   │   ├── slack_notifier.py Slack notifications
+│   │   └── mongo_connection.py Database connection
+│   ├── templates/            HTML templates
+│   ├── static/               CSS, JS, images
+│   ├── logs/                 Application logs
+│   ├── requirements.txt      Python dependencies
+│   ├── pm2.config.js         Process management
+│   └── ip.txt                Target-IP configuration
+├── infrastructure/
+│   ├── docker/               Docker configuration
+│   │   ├── Dockerfile        Application container
+│   │   └── docker-compose.yaml Multi-container setup
+│   ├── terraform/            Terraform IaC
+│   └── kubernetes/           K8s manifests
+├── docs/                      Additional documentation
+├── scripts/                   Helper scripts (start.sh, start.bat)
+├── tests/                     Test files
+└── README.md                  Main project doc
+```
 
----
-
-## Features
-
-- Automated infrastructure scanning using Nessus
-- Data storage in MongoDB for scan results
-- Basic authentication for secure access to the console
-- Configurable webhook notifications
-
----
-
-## Getting Started
-
-Follow these instructions to set up, configure, and run the `Continuous-Infra-Scanner` project using Docker Compose.
+## 🛠️ Quick Start
 
 ### Prerequisites
+- Docker and Docker Compose
+- Python 3.11+ (for local development)
+- Go 1.19+ (for Nuclei)
 
-1. [Docker](https://www.docker.com/get-started) installed on your machine
-2. [Docker Compose](https://docs.docker.com/compose/install/) installed
-3. A [Nessus](https://www.tenable.com/products/nessus) account and report scan ID for your infrastructure scans
-4. Webhook URL for notifications (Google Chat, Slack, Telegram, etc.)
-
----
-
-## Installation and Setup
-
-### Step 1: Clone the Repository
-
-Clone this repository to your local machine:
-
+### 1. Clone and Setup
 ```bash
-git clone https://github.com/hacker50120/Continuous-Infra-Scanner.git
-cd Continuous-Infra-Scanner
+git clone <repository-url>
+cd infrascanner-pro
 ```
 
-# Step 2: Create a .env File
-```
-In the root directory of the project, create a .env file to configure environment variables for the application.
-Here’s a template for the .env file:
+### 2. Configure Environment
+Create a `.env` file in the root directory:
+```bash
+# MongoDB Configuration
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=admin123
 
-# Basic Authentication Credentials for Console Access
+# Application Configuration
 CONSOLE_USERNAME=admin
-CONSOLE_PASSWORD=StrongPassword@123  # Change to a secure password of your choice
+CONSOLE_PASSWORD=admin123
 
-# MongoDB Credentials
-MONGO_INITDB_ROOT_USERNAME=MongoDBUser
-MONGO_INITDB_ROOT_PASSWORD=MongoDBPassword
-MONGO_URI=mongodb://MongoDBUser:MongoDBPassword@mongodb:27017/mydatabase?authSource=admin
+# Slack Integration (Optional)
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+SLACK_CHANNEL=#security-alerts
 
-# Nessus Credentials
-NESSUS_HOSTNAME=nessus.com
-NESSUS_USERNAME=nessus_username
-NESSUS_PASSWORD=nessus_password
-REPORT_NUMBER_ID=<Nessus Report ID>  # Replace with your actual Nessus report ID
-
-# Webhook URL for Notifications
-WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/<token>
-
+# Google Chat Webhook (Optional)
+WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/...
 ```
 
-# Explanation of Variables:
-1. `CONSOLE_USERNAME` and `CONSOLE_PASSWORD`: Basic authentication credentials for accessing the scanner console. Set a strong password.
-2. `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, and `MONGO_URI`: MongoDB credentials and connection URI for storing scan results.
-3. `NESSUS_HOSTNAME`, `NESSUS_USERNAME`, and `NESSUS_PASSWORD`: Nessus credentials to authenticate with your Nessus account.
-4. `REPORT_NUMBER_ID`: The unique ID of the Nessus scan report. You can find it in the report URL: `https://nessus.com/#/scans/reports/<ID>/hosts`.
-5. `WEBHOOK_URL`: URL for the notification webhook. The default example is for Google Chat, but you can customize it for other platforms.
-
----
-
-# Step 3: Start the Project with Docker Compose
-Run Docker Compose to build and start the project in detached mode:
+### 3. Configure Target IPs
+Edit `app/ip.txt` and add your target IP addresses:
 ```
-docker-compose up -d
+192.168.1.1
+10.0.0.1
+172.16.0.1
 ```
-This command builds the `Continuous-Infra-Scanner` image and starts both MongoDB and the scanner app.
 
----
-
-# Step 4: Access the Console
-After launching, you can access the scanner console in your web browser:
-
-- URL: `http://localhost:8180`
-- Username: `admin` (or the value of `CONSOLE_USERNAME` in your .env file)
-- Password: The value of `CONSOLE_PASSWORD` in your `.env` file
-
----
-
-# Changing the Webhook Notification Service
-By default, the project is set up to send notifications through Google Chat. To use a different platform like Slack or Telegram, update the `WEBHOOK_URL` in your `.env` file and modify the webhook formatting in the code to match the target platform’s API.
-
-Example Webhook URLs
-- Google Chat: `https://chat.googleapis.com/v1/spaces/<token>`
-- Slack: `https://hooks.slack.com/services/<token>`
-- Telegram: Set up a bot using the Telegram Bot API and get the webhook URL.
-
----
-
-# Nessus Report ID
-To configure **REPORT_NUMBER_ID**:
-
-Log into Nessus and navigate to your scan reports.
-Locate the report ID in the URL of the scan report, such as `https://nessus.com/#/scans/reports/123344/hosts`, where `123344` is the report ID.
-Set `REPORT_NUMBER_ID` to this ID in your `.env` file.
-
-
----
-
-# Troubleshooting
-
-**Common Issues**
-
-1. **Authentication Errors:** Verify that your `NESSUS_USERNAME`, `NESSUS_PASSWORD`, `CONSOLE_USERNAME`, and `CONSOLE_PASSWORD` are correctly set in the `.env` file.
-2. **MongoDB Connection:** Ensure the `MONGO_URI` matches the credentials provided for `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD`.
-2. **Webhook Notifications Not Sent:** Check the format of the `WEBHOOK_URL` and ensure it matches the format required by your notification platform (e.g., Google Chat, Slack).
-
-**Resetting the Project**
-To reset the containers and volumes, run:
-
-```
-docker-compose down -v
+### 4. Start the Application
+```bash
+cd infrastructure/docker
 docker-compose up -d
 ```
 
----
+### 5. Access the Application
+- **Web Interface**: http://localhost:8180
+- **Username**: admin
+- **Password**: admin123
 
-# Contributing
+## 🔧 Configuration
 
-Feel free to fork this repository, make improvements, and submit pull requests. Contributions are welcome!
+### Scan Schedule
+The application runs automated scans at:
+- **Daily**: 2:00 AM
+- **Weekly**: Sunday 1:00 AM (Comprehensive scan)
 
----
+### Vulnerability Scanning
+- **Nuclei Integration**: Comprehensive vulnerability assessment
+- **Severity Levels**: Critical, High, Medium, Low
+- **Template Categories**: CVEs, Misconfigurations, Exposures
 
-# License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+### Alerting
+- **Slack Notifications**: Real-time vulnerability and change alerts
+- **Infrastructure Changes**: Port changes, service modifications
+- **Risk Scoring**: Automated risk assessment (0-100 scale)
+
+## 📊 Dashboard Features
+
+### Security Operations Center
+- **Real-time Metrics**: Total scans, alerts, vulnerabilities, assets
+- **Risk Assessment**: Visual risk scoring with trend analysis
+- **Vulnerability Breakdown**: Severity-based categorization
+- **Recent Activity**: Latest scans and alerts
+- **Quick Actions**: Direct access to all features
+
+### Scan Results
+- **Port Analysis**: Open ports and services
+- **HTTP Details**: Web service information
+- **Technology Stack**: Detected frameworks and servers
+- **Vulnerability Reports**: Detailed Nuclei scan results
+
+## 🔒 Security Features
+
+### Authentication
+- HTTP Basic Authentication
+- Configurable credentials
+- Session management
+
+### Data Protection
+- Encrypted MongoDB storage
+- Secure environment variables
+- Audit logging
+
+### Network Security
+- Rate limiting on scans
+- Timeout protection
+- Error handling and recovery
+
+## 🚀 Advanced Features
+
+### Asset Management
+- **Technology Detection**: Web servers, frameworks, CMS
+- **Service Discovery**: HTTP, HTTPS, custom ports
+- **Inventory Tracking**: Asset history and changes
+
+### Reporting
+- **Daily Reports**: Automated Slack summaries
+- **Export Capabilities**: JSON, CSV formats
+- **Trend Analysis**: Historical data visualization
+
+### Integration
+- **Slack**: Real-time notifications and reports
+- **Google Chat**: Webhook-based alerts
+- **API Ready**: RESTful endpoints for external tools
+
+## 🛠️ Development
+
+### Local Development
+```bash
+cd app
+pip install -r requirements.txt
+python app.py
 ```
-This Markdown file includes all the necessary setup, configuration, and troubleshooting information and is formatted to be easily readable in GitHub’s Markdown viewer. You can replace `<link to demonstration video>` with the actual video link when it’s available.
+
+### Adding New Features
+1. **Vulnerability Scanners**: Extend `vulnerability_scanner.py`
+2. **Notification Channels**: Add to `slack_notifier.py`
+3. **UI Components**: Modify templates in `app/templates/`
+4. **Styling**: Update CSS in `app/static/css/`
+
+### Testing
+```bash
+cd tests
+python -m pytest
 ```
+
+## 📈 Monitoring and Logs
+
+### Application Logs
+- **Location**: `app/logs/`
+- **Scan Results**: `logs/scan_logs/`
+- **Vulnerability Reports**: `logs/nuclei_results/`
+- **Scheduler Logs**: `logs/scheduler.log`
+
+### Container Logs
+```bash
+docker-compose logs -f infrascanner-app
+docker-compose logs -f infrascanner-mongodb
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+1. **Port Conflicts**: Change ports in `docker-compose.yaml`
+2. **MongoDB Connection**: Check environment variables
+3. **Slack Notifications**: Verify bot token and permissions
+4. **Scan Failures**: Check target IP accessibility
+
+### Performance Tuning
+- **Concurrent Scans**: Adjust `max_workers` in `script.py`
+- **Scan Timeouts**: Modify timeout values in `vulnerability_scanner.py`
+- **Rate Limiting**: Configure Nuclei rate limits
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Issues**: Create a GitHub issue
+- **Documentation**: Check the `docs/` directory
+- **Community**: Join our discussions

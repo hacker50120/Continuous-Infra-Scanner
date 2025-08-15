@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+{% block title %}Security Alerts - InfraScanner Pro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alerts-header">
+                <h1 class="alerts-title">
+                    <i class="fas fa-exclamation-triangle me-3"></i>Security Alerts
+                </h1>
+                <p class="alerts-subtitle">Real-time notifications about infrastructure changes and potential security issues</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="alert-stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ alert_stats.unique_ips or 0 }}</h3>
+                    <p>Monitored IPs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="alert-stat-card">
+                <div class="stat-icon bg-danger">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ alert_stats.total_alerts or 0 }}</h3>
+                    <p>Total Alerts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="alert-stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ alert_stats.recent_alerts or 0 }}</h3>
+                    <p>Detected Changes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Content -->
+    {% if alerts_by_ip %}
+        <div class="row">
+            {% for ip, alert_list in alerts_by_ip.items() %}
+            <div class="col-xl-6 col-lg-12 mb-4">
+                <div class="alert-card">
+                    <!-- Alert Card Header -->
+                    <div class="alert-card-header">
+                        <div class="d-flex align-items-center">
+                            <div class="ip-alert-icon">
+                                <i class="fas fa-network-wired"></i>
+                            </div>
+                            <div class="ip-alert-info">
+                                <h4 class="alert-ip">{{ ip }}</h4>
+                                <small class="alert-count">{{ alert_list|length }} alert(s) detected</small>
+                            </div>
+                        </div>
+                        <div class="alert-severity">
+                            {% set latest_alert = alert_list[0] if alert_list else {} %}
+                            {% set severity = latest_alert.get('severity', 'low') %}
+                            <span class="severity-badge severity-{{ severity }}">
+                                {{ loop.index }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Alert Card Body -->
+                    <div class="alert-card-body">
+                        {% for alert in alert_list %}
+                        <div class="alert-entry">
+                            <!-- Alert Meta -->
+                            <div class="alert-meta">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="alert-date">
+                                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                        <span>{{ alert.alert_date }}</span>
+                                    </div>
+                                    <div class="changes-badge">
+                                        {{ alert.total_changes or alert.changes|length }} changes
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Changes List -->
+                            <div class="changes-container">
+                                <div class="changes-header" onclick="toggleChanges('{{ ip }}_{{ loop.index }}')">
+                                    <h6>
+                                        <i class="fas fa-list-ul me-2"></i>
+                                        Infrastructure Change Alert
+                                        <i class="fas fa-chevron-down toggle-icon" id="toggle_{{ ip }}_{{ loop.index }}"></i>
+                                    </h6>
+                                </div>
+                                <div class="changes-list" id="changes_{{ ip }}_{{ loop.index }}" style="display: none;">
+                                    {% for change in alert.changes %}
+                                    <div class="change-item">
+                                        {% if 'NEW:' in change %}
+                                            <i class="fas fa-plus-circle text-success me-2"></i>
+                                            <span class="change-new">{{ change }}</span>
+                                        {% elif 'CLOSED:' in change %}
+                                            <i class="fas fa-minus-circle text-danger me-2"></i>
+                                            <span class="change-closed">{{ change }}</span>
+                                        {% elif 'CHANGED:' in change %}
+                                            <i class="fas fa-exchange-alt text-warning me-2"></i>
+                                            <span class="change-modified">{{ change }}</span>
+                                        {% else %}
+                                            <i class="fas fa-info-circle text-info me-2"></i>
+                                            <span class="change-info">{{ change }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if not loop.last %}<hr class="alert-divider">{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="empty-alerts-state">
+                    <i class="fas fa-shield-alt text-success"></i>
+                    <h3>No Security Alerts</h3>
+                    <p>Great! No infrastructure changes detected yet.</p>
+                    <p><small class="text-muted">Run multiple scans to detect changes and generate alerts.</small></p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Start New Scan
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* ✅ FIXED: Dark Blue Theme Alert Header */
+.alerts-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(30, 41, 59, 0.15);
+}
+
+.alerts-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.alerts-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ✅ FIXED: Dark Theme Alert Stats Cards */
+.alert-stat-card {
+    background: var(--bg-primary, #1e293b);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color, #374151);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    height: 100px;
+}
+
+.alert-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary, white);
+}
+
+.stat-content p {
+    margin: 0;
+    color: var(--text-muted, #9ca3af);
+    font-size: 0.9rem;
+}
+
+/* ✅ FIXED: Dark Theme Alert Cards */
+.alert-card {
+    background: var(--bg-primary, #1e293b);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color, #374151);
+    transition: all 0.3s ease;
+}
+
+.alert-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* ✅ FIXED: Dark Theme Alert Card Header */
+.alert-card-header {
+    background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color, #475569);
+}
+
+.ip-alert-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    margin-right: 1rem;
+}
+
+.alert-ip {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-primary, white);
+    font-family: 'Courier New', monospace;
+}
+
+.alert-count {
+    color: var(--text-muted, #9ca3af);
+    font-size: 0.875rem;
+}
+
+/* ✅ FIXED: Theme-consistent Severity Badges */
+.severity-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    border: 1px solid #f59e0b;
+}
+
+/* ✅ FIXED: Dark Theme Alert Card Body */
+.alert-card-body {
+    padding: 1.5rem;
+    background: var(--bg-primary, #1e293b);
+}
+
+.alert-entry {
+    margin-bottom: 1.5rem;
+}
+
+.alert-entry:last-child {
+    margin-bottom: 0;
+}
+
+.alert-meta {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color, #374151);
+}
+
+.alert-date {
+    font-size: 0.9rem;
+    color: var(--text-muted, #9ca3af);
+}
+
+.changes-badge {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* ✅ FIXED: Dark Theme Changes Section */
+.changes-header {
+    background: var(--bg-secondary, #374151);
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color, #475569);
+    transition: all 0.2s ease;
+}
+
+.changes-header:hover {
+    background: var(--bg-tertiary, #475569);
+}
+
+.changes-header h6 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--text-primary, white);
+    font-weight: 600;
+}
+
+.toggle-icon {
+    transition: transform 0.2s ease;
+    color: #3b82f6;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(180deg);
+}
+
+.changes-list {
+    margin-top: 1rem;
+    animation: slideDown 0.3s ease;
+}
+
+.change-item {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color, #374151);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    background: var(--bg-secondary, #334155);
+}
+
+.change-item:last-child {
+    margin-bottom: 0;
+}
+
+.change-new {
+    color: #10b981;
+}
+
+.change-closed {
+    color: #ef4444;
+}
+
+.change-modified {
+    color: #f59e0b;
+}
+
+.change-info {
+    color: #06b6d4;
+}
+
+/* ✅ FIXED: Dark Theme Empty State */
+.empty-alerts-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-primary, #1e293b);
+    border-radius: 16px;
+    border: 2px dashed var(--border-color, #374151);
+}
+
+.empty-alerts-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-alerts-state h3 {
+    color: var(--text-primary, white);
+    margin-bottom: 0.5rem;
+}
+
+.empty-alerts-state p {
+    color: var(--text-muted, #9ca3af);
+    margin-bottom: 1rem;
+}
+
+/* Alert Divider */
+.alert-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color, #374151), transparent);
+    margin: 1.5rem 0;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ✅ RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+    .alerts-header {
+        padding: 1.5rem;
+    }
+    
+    .alerts-title {
+        font-size: 2rem;
+    }
+    
+    .alert-stat-card {
+        flex-direction: column;
+        text-align: center;
+        height: auto;
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ✅ DARK MODE CONSISTENCY */
+[data-theme="dark"] .alert-stat-card,
+[data-theme="dark"] .alert-card,
+[data-theme="dark"] .empty-alerts-state {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .alert-card-header {
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .alert-ip,
+[data-theme="dark"] .stat-content h3 {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .changes-header {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .changes-header:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .change-item {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+</style>
+
+<script>
+// Toggle changes visibility
+function toggleChanges(id) {
+    const changesList = document.getElementById('changes_' + id);
+    const icon = document.getElementById('toggle_' + id);
+    
+    if (changesList.style.display === 'none') {
+        changesList.style.display = 'block';
+        icon.classList.add('rotated');
+    } else {
+        changesList.style.display = 'none';
+        icon.classList.remove('rotated');
+    }
+}
+
+// Auto-refresh alerts every 30 seconds
+setInterval(() => {
+    location.reload();
+}, 30000);
+
+// Add animation on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const alertCards = document.querySelectorAll('.alert-card');
+    alertCards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+
+{% endblock %}

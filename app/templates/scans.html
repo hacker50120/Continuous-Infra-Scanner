@@ -1,0 +1,777 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="scan-results-container">
+    <!-- Enhanced Header with Pagination Info -->
+    <div class="results-header animate-fade-in">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="scan-results-title">
+                    <i class="fas fa-search-plus me-3"></i>Scan Results
+                </h1>
+                <p class="results-subtitle">
+                    Showing {{ pagination.showing_start }}-{{ pagination.showing_end }} of {{ pagination.total }} targets
+                    {% if total_scans %}({{ total_scans }} total scans){% endif %}
+                </p>
+            </div>
+            <div class="results-controls">
+                <!-- Per Page Selector -->
+                <div class="per-page-selector">
+                    <label for="perPageSelect" class="form-label">Show:</label>
+                    <select id="perPageSelect" class="form-select form-select-sm" onchange="changePerPage(this.value)">
+                        <option value="5" {{ 'selected' if pagination.per_page == 5 }}>5 per page</option>
+                        <option value="10" {{ 'selected' if pagination.per_page == 10 }}>10 per page</option>
+                        <option value="25" {{ 'selected' if pagination.per_page == 25 }}>25 per page</option>
+                        <option value="50" {{ 'selected' if pagination.per_page == 50 }}>50 per page</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if scans %}
+        <!-- Animated Scan Results -->
+        {% for ip, scan_list in scans.items() %}
+        <div class="card mb-4 scan-card animate-slide-up" style="animation-delay: {{ loop.index * 0.1 }}s">
+            <div class="card-header scan-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="ip-icon-badge">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="ip-info">
+                            <span class="ip-address">{{ ip }}</span>
+                            <small class="scan-count">{{ scan_list|length }} scan(s)</small>
+                        </div>
+                    </div>
+                    <div class="ports-summary">
+                        {% set latest_scan = scan_list[0] if scan_list else {} %}
+                        {% set port_count = latest_scan.open_port_details|length if latest_scan.open_port_details else 0 %}
+                        <span class="ports-badge">{{ port_count }} ports</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body scan-body">
+                {% if scan_list %}
+                    {% for scan in scan_list %}
+                        <div class="scan-entry animate-fade-in" style="animation-delay: {{ (loop.index * 0.05) }}s">
+                            <!-- Enhanced Scan Meta -->
+                            <div class="scan-meta-row">
+                                <div class="meta-item">
+                                    <i class="fas fa-calendar-alt text-primary"></i>
+                                    <strong>Date:</strong> 
+                                    <span class="scan-date">{{ scan.scanned_date }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-tachometer-alt text-success"></i>
+                                    <strong>Mode:</strong> 
+                                    <span class="scan-mode mode-{{ scan.scan_mode }}">{{ scan.scan_mode }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-network-wired text-info"></i>
+                                    <strong>Protocol:</strong> 
+                                    <span class="scan-protocol">{{ scan.scan_protocol }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Enhanced Ports List with Animations -->
+                            <div class="ports-container">
+                                {% if scan.open_port_details %}
+                                    <h6 class="ports-title">
+                                        <i class="fas fa-door-open text-warning me-2"></i>
+                                        Open Ports ({{ scan.open_port_details|length }})
+                                    </h6>
+                                    <ul class="ports-list">
+                                        {% for port, details in scan.open_port_details.items() %}
+                                            <li class="port-item animate-slide-in" style="animation-delay: {{ (loop.index * 0.02) }}s">
+                                                <div class="port-info">
+                                                    <span class="port-number">{{ port }}</span>
+                                                    <span class="port-separator">/</span>
+                                                    <span class="port-protocol">{{ details.protocol }}</span>
+                                                    <span class="port-dash">-</span>
+                                                    <span class="port-service" data-service="{{ details.service }}">
+                                                        <i class="fas fa-cog me-1"></i>
+                                                        {{ details.service }}
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <div class="no-ports-found animate-fade-in">
+                                        <i class="fas fa-shield-alt text-success"></i>
+                                        <span>No open ports detected</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if not loop.last %}
+                            <hr class="scan-divider">
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="no-scan-data animate-fade-in">
+                        <i class="fas fa-info-circle text-info"></i>
+                        <span>No scan data available for this IP</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Animated Pagination Controls -->
+        {% if pagination.total_pages > 1 %}
+        <div class="pagination-container animate-fade-in" style="animation-delay: {{ (scans|length * 0.1 + 0.2) }}s">
+            <nav aria-label="Scan results pagination">
+                <ul class="pagination pagination-lg justify-content-center">
+                    <!-- Previous Button -->
+                    <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                        <a class="page-link" href="{{ url_for('get_scans', page=pagination.prev_num, per_page=pagination.per_page) if pagination.has_prev else '#' }}" aria-label="Previous">
+                            <span aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
+                        </a>
+                    </li>
+                    
+                    <!-- Page Numbers with Smart Ellipsis -->
+                    {% for page_num in pagination.pages %}
+                        {% if page_num <= 3 or page_num > pagination.total_pages - 3 or (page_num >= pagination.page - 2 and page_num <= pagination.page + 2) %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                <a class="page-link" href="{{ url_for('get_scans', page=page_num, per_page=pagination.per_page) }}">{{ page_num }}</a>
+                            </li>
+                        {% elif page_num == 4 or page_num == pagination.total_pages - 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Next Button -->
+                    <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                        <a class="page-link" href="{{ url_for('get_scans', page=pagination.next_num, per_page=pagination.per_page) if pagination.has_next else '#' }}" aria-label="Next">
+                            <span aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Pagination Info -->
+            <div class="pagination-info text-center mt-3">
+                <small class="text-muted">
+                    Page {{ pagination.page }} of {{ pagination.total_pages }} 
+                    ({{ pagination.total }} total targets)
+                </small>
+            </div>
+        </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- Empty State with Animation -->
+        <div class="empty-state-card animate-fade-in">
+            <div class="empty-state">
+                <i class="fas fa-search text-muted"></i>
+                <h3>No Scan Results Found</h3>
+                <p>Start a scan to see your infrastructure analysis here</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="fas fa-play me-2"></i>Start New Scan
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* ✅ ORIGINAL BEAUTIFUL ANIMATIONS */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* ✅ ANIMATION CLASSES */
+.animate-fade-in {
+    animation: fadeIn 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+.animate-slide-up {
+    animation: slideUp 0.8s ease-out forwards;
+    opacity: 0;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.4s ease-out forwards;
+    opacity: 0;
+}
+
+/* ✅ ENHANCED HEADER WITH GRADIENT */
+.results-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+}
+
+.scan-results-container {
+    padding: 1rem;
+}
+
+.scan-results-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.results-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.results-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.per-page-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.per-page-selector label {
+    color: white;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.per-page-selector select {
+    min-width: 130px;
+}
+
+/* ✅ ENHANCED SCAN CARDS WITH ORIGINAL ANIMATIONS */
+.scan-card {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    background: var(--bg-primary);
+}
+
+.scan-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* ✅ ENHANCED CARD HEADER */
+.scan-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1.5rem;
+    color: white;
+}
+
+.ip-icon-badge {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+.ip-icon-badge i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.ip-address {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    display: block;
+}
+
+.scan-count {
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.ports-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+/* ✅ ENHANCED CARD BODY */
+.scan-body {
+    padding: 2rem;
+    background: var(--bg-primary);
+}
+
+.scan-entry {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.scan-entry:last-child {
+    margin-bottom: 0;
+}
+
+/* ✅ ENHANCED META ROW */
+.scan-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+.meta-item i {
+    width: 16px;
+}
+
+.scan-date {
+    font-family: 'Courier New', monospace;
+    color: var(--text-primary);
+}
+
+.scan-mode {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.mode-light {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.mode-fast {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.mode-deep {
+    background: #fde2e8;
+    color: #991b1b;
+}
+
+.scan-protocol {
+    font-family: 'Courier New', monospace;
+    background: var(--bg-tertiary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* ✅ ENHANCED PORTS SECTION */
+.ports-container {
+    margin-top: 1rem;
+}
+
+.ports-title {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.ports-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.port-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.port-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    transform: translateX(4px);
+}
+
+.port-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Courier New', monospace;
+}
+
+.port-number {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 1rem;
+}
+
+.port-separator {
+    color: var(--text-muted);
+}
+
+.port-protocol {
+    color: #059669;
+    font-weight: 600;
+}
+
+.port-dash {
+    color: var(--text-muted);
+}
+
+.port-service {
+    color: var(--text-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.port-service i {
+    color: #f59e0b;
+}
+
+/* ✅ NO PORTS FOUND */
+.no-ports-found {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-primary);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    color: var(--text-muted);
+}
+
+.no-ports-found i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.no-scan-data {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    color: var(--text-muted);
+}
+
+.no-scan-data i {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+/* ✅ SCAN DIVIDER */
+.scan-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 2rem 0;
+}
+
+/* ✅ PAGINATION STYLES WITH ANIMATIONS */
+.pagination-container {
+    margin: 3rem 0 2rem 0;
+    padding: 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    color: #667eea;
+    border: 1px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.page-link:hover {
+    color: white;
+    background-color: #667eea;
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+}
+
+.page-item.active .page-link {
+    background-color: #667eea;
+    border-color: #667eea;
+    color: white;
+    font-weight: 600;
+}
+
+.page-item.disabled .page-link {
+    color: #6b7280;
+    background-color: #f9fafb;
+    border-color: #e5e7eb;
+    cursor: not-allowed;
+}
+
+.page-item.disabled .page-link:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.pagination-info {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+/* ✅ EMPTY STATE */
+.empty-state-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: #9ca3af;
+}
+
+.empty-state h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+}
+
+/* ✅ RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+    .results-header {
+        padding: 1.5rem;
+    }
+    
+    .results-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .scan-meta-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .meta-item {
+        min-width: auto;
+    }
+    
+    .scan-results-title {
+        font-size: 2rem;
+    }
+    
+    .ip-address {
+        font-size: 1.25rem;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .page-link {
+        padding: 0.5rem 0.75rem;
+        margin: 0.125rem;
+    }
+}
+
+/* ✅ DARK MODE ENHANCEMENTS */
+[data-theme="dark"] .scan-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .scan-entry {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .port-item {
+    background: var(--bg-primary);
+}
+
+[data-theme="dark"] .empty-state-card,
+[data-theme="dark"] .pagination-container {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .page-link {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .page-item.active .page-link {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+</style>
+
+<script>
+// ✅ PAGINATION FUNCTIONALITY
+function changePerPage(perPage) {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('per_page', perPage);
+    urlParams.set('page', '1'); // Reset to first page
+    
+    // Add loading animation
+    document.body.style.opacity = '0.7';
+    
+    setTimeout(() => {
+        window.location.search = urlParams.toString();
+    }, 200);
+}
+
+// ✅ SERVICE ICON MAPPING
+function getServiceIcon(service) {
+    const iconMap = {
+        'http': 'fa-globe',
+        'https': 'fa-lock',
+        'ssh': 'fa-terminal',
+        'ftp': 'fa-folder-open',
+        'smtp': 'fa-envelope',
+        'dns': 'fa-sitemap',
+        'mysql': 'fa-database',
+        'postgresql': 'fa-database',
+        'mongodb': 'fa-leaf',
+        'redis': 'fa-memory',
+        'telnet': 'fa-terminal',
+        'rtsp': 'fa-video',
+        'tcpwrapped': 'fa-shield-alt',
+        'werkzeug': 'fa-flask',
+        'simplehttpserver': 'fa-server',
+        'domain': 'fa-sitemap',
+        'unknown': 'fa-question-circle'
+    };
+    
+    if (!service || service === 'unknown') return 'fa-question-circle';
+    
+    const serviceLower = service.toLowerCase();
+    
+    // Check for exact matches first
+    if (iconMap[serviceLower]) {
+        return iconMap[serviceLower];
+    }
+    
+    // Check for partial matches
+    for (const [key, icon] of Object.entries(iconMap)) {
+        if (serviceLower.includes(key)) {
+            return icon;
+        }
+    }
+    
+    return 'fa-cog';
+}
+
+// ✅ ENHANCED PAGE INITIALIZATION WITH ANIMATIONS
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply service icons
+    const serviceElements = document.querySelectorAll('.port-service');
+    serviceElements.forEach(el => {
+        const serviceText = el.getAttribute('data-service') || el.textContent.trim();
+        const iconElement = el.querySelector('i');
+        if (iconElement) {
+            const iconClass = getServiceIcon(serviceText);
+            iconElement.className = `fas ${iconClass} me-1`;
+        }
+    });
+    
+    // Staggered animation trigger for cards
+    const cards = document.querySelectorAll('.scan-card');
+    let delay = 0;
+    
+    cards.forEach((card, index) => {
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, delay);
+        delay += 100; // 100ms delay between cards
+    });
+    
+    // Trigger pagination animation
+    const paginationContainer = document.querySelector('.pagination-container');
+    if (paginationContainer) {
+        setTimeout(() => {
+            paginationContainer.style.opacity = '1';
+            paginationContainer.style.transform = 'translateY(0)';
+        }, delay + 200);
+    }
+    
+    // Page transition effects
+    const pageLinks = document.querySelectorAll('.page-link:not(.disabled)');
+    pageLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (!this.closest('.page-item').classList.contains('disabled')) {
+                document.body.style.opacity = '0.7';
+                document.body.style.transform = 'scale(0.98)';
+            }
+        });
+    });
+    
+    console.log(`✅ Scan results page loaded with ${cards.length} animated cards and pagination`);
+});
+
+// ✅ SMOOTH PAGE TRANSITIONS
+window.addEventListener('beforeunload', function() {
+    document.body.style.opacity = '0.5';
+    document.body.style.transform = 'scale(0.95)';
+});
+</script>
+
+{% endblock %}

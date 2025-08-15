@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - InfraScanner Pro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="row mb-4">
+        <div class="col-12 dashboard-header">
+            <h1 class="mb-0"><i class="fas fa-tachometer-alt me-3"></i>Security Dashboard</h1>
+            <p class="text-muted mt-2">Real-time infrastructure security monitoring and analytics</p>
+        </div>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row mb-5">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3 class="fw-bold text-primary mb-0">{{ stats.total_scans }}</h3>
+                        <p class="text-muted mb-0">Total Scans</p>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-search text-primary" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="text-success me-2"><i class="fas fa-arrow-up"></i> +12%</small>
+                    <small class="text-muted">vs last month</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3 class="fw-bold text-warning mb-0">{{ stats.total_alerts }}</h3>
+                        <p class="text-muted mb-0">Active Alerts</p>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="text-danger me-2"><i class="fas fa-arrow-up"></i> +5%</small>
+                    <small class="text-muted">requires attention</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3 class="fw-bold text-danger mb-0">{{ stats.total_vulnerabilities }}</h3>
+                        <p class="text-muted mb-0">Vulnerabilities</p>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-bug text-danger" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="text-success me-2"><i class="fas fa-arrow-down"></i> -8%</small>
+                    <small class="text-muted">fixed this week</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3 class="fw-bold text-info mb-0">{{ stats.target_ips }}</h3>
+                        <p class="text-muted mb-0">Monitored Assets</p>
+                    </div>
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                        <i class="fas fa-bullseye text-info" style="font-size: 1.5rem;"></i>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <small class="text-success me-2"><i class="fas fa-check"></i> All online</small>
+                    <small class="text-muted">status good</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Score and Vulnerability Breakdown -->
+    <div class="row mb-5">
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-gauge-high me-2"></i>Risk Score</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="position-relative d-inline-block">
+                        <canvas id="riskGauge" width="200" height="120"></canvas>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <h2 class="fw-bold mb-0">{{ stats.risk_score }}</h2>
+                            <small class="text-muted">/ 100</small>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        {% if stats.risk_score < 30 %}
+                            <span class="badge bg-success">Low Risk</span>
+                        {% elif stats.risk_score < 60 %}
+                            <span class="badge bg-warning">Medium Risk</span>
+                        {% elif stats.risk_score < 80 %}
+                            <span class="badge bg-danger">High Risk</span>
+                        {% else %}
+                            <span class="badge" style="background: linear-gradient(135deg, #dc2626, #ef4444); color: white;">Critical Risk</span>
+                        {% endif %}
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">Risk assessment based on vulnerabilities and alerts</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Vulnerability Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for severity, count in stats.vulnerability_breakdown.items() %}
+                        <div class="col-md-2 col-sm-4 col-6 mb-3">
+                            <div class="text-center">
+                                {% set bg_class = 'danger' if severity == 'critical' else 'warning' if severity == 'high' else 'info' if severity == 'medium' else 'success' if severity == 'low' else 'secondary' %}
+                                <div class="bg-{{ bg_class }} bg-opacity-10 rounded-circle p-3 mb-2 mx-auto" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                    <span class="fw-bold text-{{ bg_class }}">{{ count }}</span>
+                                </div>
+                                <small class="text-muted text-capitalize">{{ severity }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Progress bar showing vulnerability distribution -->
+                    <div class="progress mt-3" style="height: 8px;">
+                        {% set total_vulns = stats.vulnerability_breakdown.values() | sum %}
+                        {% if total_vulns > 0 %}
+                            <div class="progress-bar bg-danger" style="width: {{ (stats.vulnerability_breakdown.critical / total_vulns * 100) | round(1) }}%" title="Critical: {{ stats.vulnerability_breakdown.critical }}"></div>
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.vulnerability_breakdown.high / total_vulns * 100) | round(1) }}%" title="High: {{ stats.vulnerability_breakdown.high }}"></div>
+                            <div class="progress-bar bg-info" style="width: {{ (stats.vulnerability_breakdown.medium / total_vulns * 100) | round(1) }}%" title="Medium: {{ stats.vulnerability_breakdown.medium }}"></div>
+                            <div class="progress-bar bg-success" style="width: {{ (stats.vulnerability_breakdown.low / total_vulns * 100) | round(1) }}%" title="Low: {{ stats.vulnerability_breakdown.low }}"></div>
+                            <div class="progress-bar bg-secondary" style="width: {{ (stats.vulnerability_breakdown.info / total_vulns * 100) | round(1) }}%" title="Info: {{ stats.vulnerability_breakdown.info }}"></div>
+                        {% else %}
+                            <div class="progress-bar bg-success" style="width: 100%">No Vulnerabilities</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-shield-alt me-2"></i>Security Status</h6>
+                            {% if stats.risk_score < 30 %}
+                                <p class="text-success mb-0"><i class="fas fa-check-circle me-2"></i>Infrastructure is secure</p>
+                            {% elif stats.risk_score < 60 %}
+                                <p class="text-warning mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Some issues need attention</p>
+                            {% else %}
+                                <p class="text-danger mb-0"><i class="fas fa-times-circle me-2"></i>Critical issues require immediate action</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-clock me-2"></i>Last Updated</h6>
+                            <p class="text-muted mb-0" id="last-updated">Just now</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Scans</h5>
+                    <a href="{{ url_for('get_scans') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if stats.recent_scans %}
+                        {% for scan in stats.recent_scans %}
+                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="fas fa-server text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ scan.target }}</h6>
+                                <small class="text-muted">{{ scan.timestamp }} • {{ scan.open_ports }} ports • {{ scan.scan_mode }}</small>
+                            </div>
+                            <span class="badge bg-success">✓</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-search text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">No recent scans</p>
+                            <a href="{{ url_for('index') }}" class="btn btn-sm btn-primary mt-2">Start Scanning</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Alerts</h5>
+                    <a href="{{ url_for('get_alerts') }}" class="btn btn-sm btn-outline-warning">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if stats.recent_alerts %}
+                        {% for alert in stats.recent_alerts %}
+                        <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ alert.target }}</h6>
+                                <small class="text-muted">{{ alert.timestamp }} • {{ alert.changes_count }} changes</small>
+                            </div>
+                            <span class="badge bg-warning">!</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">No recent alerts</p>
+                            <small class="text-muted">Your infrastructure is stable</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{{ url_for('index') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-play me-2"></i>Start Scan
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{{ url_for('vulnerabilities') }}" class="btn btn-warning w-100">
+                                <i class="fas fa-shield-alt me-2"></i>Vulnerability Check
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{{ url_for('edit_ips') }}" class="btn btn-info w-100">
+                                <i class="fas fa-plus me-2"></i>Add Targets
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <a href="{{ url_for('config') }}" class="btn btn-secondary w-100">
+                                <i class="fas fa-cog me-2"></i>Settings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Risk gauge chart
+const canvas = document.getElementById('riskGauge');
+if (canvas) {
+    const ctx = canvas.getContext('2d');
+    const riskScore = {{ stats.risk_score }};
+
+    function drawGauge() {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height - 20;
+        const radius = 80;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Background arc
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        ctx.stroke();
+        
+        // Risk score arc
+        const angle = Math.PI + (riskScore / 100 * Math.PI);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, angle);
+        ctx.lineWidth = 20;
+        
+        // Color based on risk level
+        if (riskScore < 30) ctx.strokeStyle = '#059669';
+        else if (riskScore < 60) ctx.strokeStyle = '#d97706';
+        else if (riskScore < 80) ctx.strokeStyle = '#ea580c';
+        else ctx.strokeStyle = '#dc2626';
+        
+        ctx.stroke();
+    }
+
+    // Draw gauge when page loads
+    drawGauge();
+    
+    // Redraw on theme change
+    document.addEventListener('themechange', drawGauge);
+}
+
+// Update timestamps
+function updateTimestamps() {
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) {
+        const now = new Date();
+        lastUpdated.textContent = now.toLocaleString();
+    }
+}
+
+// Auto-refresh dashboard data every 60 seconds
+setInterval(function() {
+    updateTimestamps();
+}, 60000);
+
+// Update on page load
+updateTimestamps();
+
+// Add smooth animations to stats cards
+document.addEventListener('DOMContentLoaded', function() {
+    const statsCards = document.querySelectorAll('.stats-card');
+    statsCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate-fade-in');
+    });
+});
+
+// Progress bar tooltips
+document.querySelectorAll('.progress-bar').forEach(bar => {
+    bar.addEventListener('mouseenter', function() {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'tooltip-custom';
+        tooltip.textContent = this.title;
+        tooltip.style.cssText = `
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+        `;
+        document.body.appendChild(tooltip);
+    });
+    
+    bar.addEventListener('mouseleave', function() {
+        const tooltip = document.querySelector('.tooltip-custom');
+        if (tooltip) tooltip.remove();
+    });
+});
+</script>
+{% endblock %}

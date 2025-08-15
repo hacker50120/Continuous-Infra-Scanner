@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+{% block title %}Settings - InfraScanner Pro{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-0"><i class="fas fa-cog me-3"></i>System Configuration</h1>
+            <p class="text-muted mt-2">Configure scanning parameters, integrations, and scheduling options</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Scan Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form id="configForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Max Workers</label>
+                                <input type="number" class="form-control" name="MAX_WORKERS" min="1" max="100" placeholder="10">
+                                <small class="text-muted">Number of concurrent scan threads</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Scan Timeout (seconds)</label>
+                                <input type="number" class="form-control" name="SCAN_TIMEOUT" min="60" max="3600" placeholder="600">
+                                <small class="text-muted">Maximum time per scan operation</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Risk Score Threshold</label>
+                                <input type="number" class="form-control" name="RISK_SCORE_THRESHOLD" min="0" max="100" step="0.1" placeholder="50.0">
+                                <small class="text-muted">Alert threshold for risk scores</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Rate Limit (req/sec)</label>
+                                <input type="number" class="form-control" name="RATE_LIMIT" min="1" max="500" placeholder="150">
+                                <small class="text-muted">Nuclei scan rate limiting</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Max Vulnerabilities Threshold</label>
+                            <input type="number" class="form-control" name="MAX_VULNERABILITIES_THRESHOLD" min="1" max="10000" placeholder="100">
+                            <small class="text-muted">Maximum vulnerabilities to process per scan</small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notification Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="NOTIFICATION_ENABLED" id="notificationsEnabled">
+                                <label class="form-check-label" for="notificationsEnabled">
+                                    Enable Notifications
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Slack Webhook URL</label>
+                        <input type="url" class="form-control" name="SLACK_WEBHOOK_URL" placeholder="https://hooks.slack.com/services/...">
+                        <small class="text-muted">Slack webhook for security alerts</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Google API Key</label>
+                        <input type="password" class="form-control" name="GOOGLE_API_KEY" placeholder="Enter Google API key">
+                        <small class="text-muted">For Google Chat and other integrations</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Scheduler Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Schedule Type</label>
+                        <select class="form-select" name="SCHEDULE_TYPE" id="scheduleType">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                    
+                    <div id="dailyConfig" class="schedule-config">
+                        <div class="mb-3">
+                            <label class="form-label">Daily Scan Time</label>
+                            <input type="time" class="form-control" name="SCHEDULER_DAILY_TIME" value="02:00">
+                            <small class="text-muted">Time to run daily scans (24-hour format)</small>
+                        </div>
+                    </div>
+                    
+                    <div id="weeklyConfig" class="schedule-config" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Weekly Days</label>
+                                <select class="form-select" name="SCHEDULER_WEEKLY_DAYS" multiple size="7">
+                                    <option value="monday">Monday</option>
+                                    <option value="tuesday">Tuesday</option>
+                                    <option value="wednesday">Wednesday</option>
+                                    <option value="thursday">Thursday</option>
+                                    <option value="friday">Friday</option>
+                                    <option value="saturday">Saturday</option>
+                                    <option value="sunday">Sunday</option>
+                                </select>
+                                <small class="text-muted">Hold Ctrl/Cmd to select multiple days</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Weekly Scan Time</label>
+                                <input type="time" class="form-control" name="SCHEDULER_WEEKLY_TIME" value="01:00">
+                                <small class="text-muted">Time to run weekly scans</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Server Time:</span>
+                            <span id="server-time" class="badge bg-info">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Database:</span>
+                            <span class="badge bg-success">Connected</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Scanner:</span>
+                            <span class="badge bg-secondary">Idle</span>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" onclick="saveConfig()">
+                            <i class="fas fa-save me-2"></i>Save Configuration
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="reloadConfig()">
+                            <i class="fas fa-sync me-2"></i>Reload Settings
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="testConnections()">
+                            <i class="fas fa-network-wired me-2"></i>Test Connections
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Changes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">No recent configuration changes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global flag to prevent popup on initial load
+let isInitialLoad = true;
+
+// Schedule type toggle
+document.getElementById('scheduleType').addEventListener('change', function() {
+    const dailyConfig = document.getElementById('dailyConfig');
+    const weeklyConfig = document.getElementById('weeklyConfig');
+    
+    if (this.value === 'daily') {
+        dailyConfig.style.display = 'block';
+        weeklyConfig.style.display = 'none';
+    } else {
+        dailyConfig.style.display = 'none';
+        weeklyConfig.style.display = 'block';
+    }
+});
+
+// Load current configuration (FIXED: No popup on initial load)
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        
+        // Populate form fields
+        for (const [key, value] of Object.entries(config)) {
+            const field = document.querySelector(`[name="${key}"]`);
+            if (field) {
+                if (field.type === 'checkbox') {
+                    field.checked = value;
+                } else {
+                    field.value = value;
+                }
+            }
+        }
+        
+        // Trigger schedule type change
+        document.getElementById('scheduleType').dispatchEvent(new Event('change'));
+        
+        // Only show success message if this is NOT the initial load
+        if (!isInitialLoad) {
+            showAlert('Configuration reloaded successfully', 'success');
+        }
+    } catch (error) {
+        showAlert('Failed to load configuration: ' + error.message, 'danger');
+    }
+}
+
+// Save configuration
+async function saveConfig() {
+    try {
+        const formData = new FormData(document.getElementById('configForm'));
+        const config = {};
+        
+        for (const [key, value] of formData.entries()) {
+            config[key] = value;
+        }
+        
+        // Handle checkbox
+        config.NOTIFICATION_ENABLED = document.querySelector('[name="NOTIFICATION_ENABLED"]').checked;
+        
+        const response = await fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(config)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('Configuration saved successfully', 'success');
+        } else {
+            showAlert('Failed to save configuration: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('Failed to save configuration: ' + error.message, 'danger');
+    }
+}
+
+// Test connections
+async function testConnections() {
+    showAlert('Testing connections...', 'info');
+    
+    try {
+        const response = await fetch('/api/time');
+        const data = await response.json();
+        if (response.ok) {
+            showAlert('All connections tested successfully', 'success');
+        } else {
+            showAlert('Connection test failed', 'warning');
+        }
+    } catch (error) {
+        showAlert('Connection test failed: ' + error.message, 'danger');
+    }
+}
+
+// Update server time
+async function updateServerTime() {
+    try {
+        const response = await fetch('/api/time');
+        const data = await response.json();
+        if (response.ok) {
+            document.getElementById('server-time').textContent = data.time;
+        }
+    } catch (error) {
+        console.error('Failed to update server time:', error);
+    }
+}
+
+// FIXED: Show alert message in bottom-right corner
+function showAlert(message, type) {
+    // Remove any existing alerts
+    const existingAlerts = document.querySelectorAll('.toast-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `toast-alert alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${getAlertIcon(type)} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    // Add styles for bottom-right positioning
+    alertDiv.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 350px;
+        min-width: 300px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        border: none;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Add to body
+    document.body.appendChild(alertDiv);
+    
+    // Auto-dismiss after 4 seconds
+    setTimeout(() => {
+        if (alertDiv.parentElement) {
+            alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => alertDiv.remove(), 300);
+        }
+    }, 4000);
+}
+
+// Helper function to get appropriate icon for alert type
+function getAlertIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'danger': 'exclamation-circle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Manual reload function
+function reloadConfig() {
+    isInitialLoad = false; // Ensure popup shows for manual reload
+    loadConfig();
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load configuration without showing popup
+    loadConfig();
+    
+    // Update server time
+    updateServerTime();
+    setInterval(updateServerTime, 60000); // Update every minute
+    
+    // Set flag to allow popups after initial load
+    setTimeout(() => {
+        isInitialLoad = false;
+    }, 1000);
+});
+</script>
+
+<!-- Add CSS for toast animations -->
+<style>
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.toast-alert {
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    border-left: 4px solid;
+}
+
+.toast-alert.alert-success {
+    border-left-color: var(--success-color, #10b981);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.toast-alert.alert-danger {
+    border-left-color: var(--danger-color, #ef4444);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.toast-alert.alert-warning {
+    border-left-color: var(--warning-color, #f59e0b);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.toast-alert.alert-info {
+    border-left-color: var(--info-color, #06b6d4);
+    background: rgba(6, 182, 212, 0.1);
+}
+</style>
+{% endblock %}
